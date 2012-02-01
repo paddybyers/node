@@ -94,7 +94,7 @@
 #define NODE_STRINGIFY_HELPER(n) #n
 #endif
 
-#define HAVE_ISOLATES
+#define HAVE_ISOLATES 1
 
 #ifdef NODE_LIBRARY
 # define EXIT(X) node::Isolate *i = node::Isolate::GetCurrent(); if(!i->exit_status) i->exit_status = (X)
