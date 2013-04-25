@@ -379,6 +379,9 @@ void UDPWrap::OnSend(uv_udp_send_t* req, int status) {
   };
 
   MakeCallback(req_wrap->object_, oncomplete_sym, ARRAY_SIZE(argv), argv);
+  // Deleting req_wrap could get a segment fault sometimes, but the js callback did call successfully.
+  // If commenting it, everything goes well.
+  // Maybe this is a bug ?
   delete req_wrap;
 }
 
