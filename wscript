@@ -861,6 +861,7 @@ def build(bld):
   node.chmod = 0755
   node.source = """
     src/node.cc
+    src/node_androidlog.cc
     src/node_buffer.cc
     src/node_javascript.cc
     src/node_extensions.cc

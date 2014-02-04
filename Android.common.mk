@@ -34,6 +34,7 @@ LOCAL_C_INCLUDES += \
 	
 LOCAL_SRC_FILES := \
 	src/node.cc \
+        src/node_androidlog.cc \
 	src/node_buffer.cc \
 	src/node_constants.cc \
 	src/node_crypto.cc \

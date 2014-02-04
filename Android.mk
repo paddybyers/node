@@ -21,6 +21,8 @@ include $(LOCAL_PATH)/Android.common.mk
 # to override exit handling in node.cc
 LOCAL_CFLAGS += -DNODE_LIBRARY
 
+LOCAL_LDLIBS += -llog
+
 include $(BUILD_STATIC_LIBRARY)
 
 $(call import-module,deps/http_parser)

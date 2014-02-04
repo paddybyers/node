@@ -79,6 +79,17 @@ typedef int mode_t;
 # include <node_signal_watcher.h>
 # include <node_stat_watcher.h>
 #endif
+
+#ifdef ANDROID
+#include <android/log.h>
+#define DEBUG_TAG "node.js"
+#define LOGV(...) __android_log_print(ANDROID_LOG_VERBOSE, DEBUG_TAG,__VA_ARGS__)
+#define LOGD(...) __android_log_print(ANDROID_LOG_DEBUG  , DEBUG_TAG,__VA_ARGS__)
+#define LOGI(...) __android_log_print(ANDROID_LOG_INFO   , DEBUG_TAG,__VA_ARGS__)
+#define LOGW(...) __android_log_print(ANDROID_LOG_WARN   , DEBUG_TAG,__VA_ARGS__)
+#define LOGE(...) __android_log_print(ANDROID_LOG_ERROR  , DEBUG_TAG,__VA_ARGS__)
+#endif
+
 #include <node_constants.h>
 #include <node_javascript.h>
 #include <node_version.h>
@@ -835,6 +846,7 @@ void MakeCallback(Handle<Object> object,
   Local<Value> callback_v = object->Get(String::New(method));
   if (!callback_v->IsFunction()) {
     fprintf(stderr, "method = %s", method);
+    LOGE("method = %s", method);
   }
   assert(callback_v->IsFunction());
   Local<Function> callback = Local<Function>::Cast(callback_v);
@@ -903,9 +915,13 @@ enum encoding ParseEncoding(Handle<Value> encoding_v, enum encoding _default) {
   } else if (strcasecmp(*encoding, "raw") == 0) {
     fprintf(stderr, "'raw' (array of integers) has been removed. "
                     "Use 'binary'.\n");
+    LOGE("'raw' (array of integers) has been removed. "
+                    "Use 'binary'.\n");
     return BINARY;
   } else if (strcasecmp(*encoding, "raws") == 0) {
     fprintf(stderr, "'raws' encoding has been renamed to 'binary'. "
+                    "Please update your code.\n");
+    LOGE("'raws' encoding has been renamed to 'binary'. "
                     "Please update your code.\n");
     return BINARY;
   } else {
@@ -942,6 +958,8 @@ ssize_t DecodeBytes(v8::Handle<v8::Value> val, enum encoding encoding) {
   if (val->IsArray()) {
     fprintf(stderr, "'raw' encoding (array of integers) has been removed. "
                     "Use 'binary'.\n");
+    LOGE("'raw' encoding (array of integers) has been removed. "
+                    "Use 'binary'.\n");
     assert(0);
     return -1;
   }
@@ -974,6 +992,8 @@ ssize_t DecodeWrite(char *buf,
 
   if (val->IsArray()) {
     fprintf(stderr, "'raw' encoding (array of integers) has been removed. "
+                    "Use 'binary'.\n");
+    LOGE("'raw' encoding (array of integers) has been removed. "
                     "Use 'binary'.\n");
     assert(0);
     return -1;
@@ -1018,6 +1038,7 @@ void DisplayExceptionLine (TryCatch &try_catch) {
   uv_tty_reset_mode();
 
   fprintf(stderr, "\n");
+  LOGE("\n");
 
   if (!message.IsEmpty()) {
     // Print (filename):(line number): (message).
@@ -1025,6 +1046,7 @@ void DisplayExceptionLine (TryCatch &try_catch) {
     const char* filename_string = *filename;
     int linenum = message->GetLineNumber();
     fprintf(stderr, "%s:%i\n", filename_string, linenum);
+    LOGE("%s:%i\n", filename_string, linenum);
     // Print line of source code.
     String::Utf8Value sourceline(message->GetSourceLine());
     const char* sourceline_string = *sourceline;
@@ -1050,6 +1072,7 @@ void DisplayExceptionLine (TryCatch &try_catch) {
     int offset = linenum == 1 ? 62 : 0;
 
     fprintf(stderr, "%s\n", sourceline_string + offset);
+    LOGE("%s\n", sourceline_string + offset);
     // Print wavy underline (GetUnderline is deprecated).
     int start = message->GetStartColumn();
     for (int i = offset; i < start; i++) {
@@ -1058,8 +1081,10 @@ void DisplayExceptionLine (TryCatch &try_catch) {
     int end = message->GetEndColumn();
     for (int i = start; i < end; i++) {
       fprintf(stderr, "^");
+      LOGE("^");
     }
     fprintf(stderr, "\n");
+    LOGE("\n");
   }
 }
 
@@ -1075,6 +1100,7 @@ static void ReportException(TryCatch &try_catch, bool show_line) {
   // range errors have a trace member set to undefined
   if (trace.length() > 0 && !try_catch.StackTrace()->IsUndefined()) {
     fprintf(stderr, "%s\n", *trace);
+    LOGE("%s\n", *trace);
   } else {
     // this really only happens for RangeErrors, since they're the only
     // kind that won't have all this info in the trace, or when non-Error
@@ -1087,11 +1113,13 @@ static void ReportException(TryCatch &try_catch, bool show_line) {
     if (isErrorObject) {
       String::Utf8Value name(er->ToObject()->Get(String::New("name")));
       fprintf(stderr, "%s: ", *name);
+      LOGE("%s: ", *name);
     }
 
     String::Utf8Value msg(!isErrorObject ? er->ToString()
                          : er->ToObject()->Get(String::New("message"))->ToString());
     fprintf(stderr, "%s\n", *msg);
+    LOGE("%s\n", *msg);
   }
 
   fflush(stderr);
@@ -1553,8 +1581,10 @@ Handle<Value> DLOpen(const v8::Arguments& args) {
 void OnFatalError(const char* location, const char* message) {
   if (location) {
     fprintf(stderr, "FATAL ERROR: %s %s\n", location, message);
+    LOGE("FATAL ERROR: %s %s\n", location, message);
   } else {
     fprintf(stderr, "FATAL ERROR: %s\n", message);
+    LOGE("FATAL ERROR: %s\n", message);
   }
   BREAK_AND_EXIT(1);
 }
@@ -1758,6 +1788,7 @@ static Handle<Value> EnvSetter(Local<String> property,
   int r = _putenv(pair);
   if (r) {
     fprintf(stderr, "error putenv: '%s'\n", pair);
+    LOGE("error putenv: '%s'\n", pair);
   }
   delete [] pair;
 #endif
@@ -1802,6 +1833,7 @@ static Handle<Boolean> EnvDeleter(Local<String> property,
     int r = _putenv(pair);
     if (r) {
       fprintf(stderr, "error unsetenv: '%s'\n", pair);
+      LOGE("error unsetenv: '%s'\n", pair);
     }
     delete [] pair;
 #endif
@@ -2093,6 +2125,24 @@ static void PrintHelp() {
          "NODE_DISABLE_COLORS    Set to 1 to disable colors in the REPL\n"
          "\n"
          "Documentation can be found at http://nodejs.org/\n");
+  LOGV("Usage: node [options] [ -e script | script.js ] [arguments] \n"
+         "       node debug script.js [arguments] \n"
+         "\n"
+         "Options:\n"
+         "  -v, --version        print node's version\n"
+         "  -e, --eval script    evaluate script\n"
+         "  --v8-options         print v8 command line options\n"
+         "  --vars               print various compiled-in variables\n"
+         "  --max-stack-size=val set max v8 stack size (bytes)\n"
+         "\n"
+         "Enviromental variables:\n"
+         "NODE_PATH              ':'-separated list of directories\n"
+         "                       prefixed to the module search path.\n"
+         "NODE_MODULE_CONTEXTS   Set to 1 to load modules in their own\n"
+         "                       global contexts.\n"
+         "NODE_DISABLE_COLORS    Set to 1 to disable colors in the REPL\n"
+         "\n"
+         "Documentation can be found at http://nodejs.org/\n");
 }
     
 NodeOptions::NodeOptions() {
@@ -2122,13 +2172,16 @@ void NodeOptions::ParseArgs(int argc, char **argv) {
 #ifndef NODE_LIBRARY
     } else if (strcmp(arg, "--version") == 0 || strcmp(arg, "-v") == 0) {
       printf("%s\n", NODE_VERSION);
+      LOGV("%s\n", NODE_VERSION);
       exit(0);
     } else if (strcmp(arg, "--vars") == 0) {
 #ifdef NODE_PREFIX
       printf("NODE_PREFIX: %s\n", NODE_PREFIX);
+      LOGV("NODE_PREFIX: %s\n", NODE_PREFIX);
 #endif
 #ifdef NODE_CFLAGS
       printf("NODE_CFLAGS: %s\n", NODE_CFLAGS);
+      LOGV("NODE_CFLAGS: %s\n", NODE_CFLAGS);
 #endif
       exit(0);
     } else if (strcmp(arg, "--help") == 0 || strcmp(arg, "-h") == 0) {
@@ -2145,6 +2198,7 @@ void NodeOptions::ParseArgs(int argc, char **argv) {
     } else if (strcmp(arg, "--eval") == 0 || strcmp(arg, "-e") == 0) {
       if (argc <= i + 1) {
         fprintf(stderr, "Error: --eval requires an argument\n");
+        LOGE("Error: --eval requires an argument\n");
         EXIT(1);
       }
       argv[i] = const_cast<char*>("");
@@ -2180,8 +2234,11 @@ void NodeOptions::ParseDebugOpt(const char* arg) {
     return;
 
   fprintf(stderr, "Bad debug option.\n");
-  if (p) fprintf(stderr, "Debug port must be in range 1025 to 65535.\n");
-  
+  LOGE("Bad debug option.\n");
+  if (p) {
+     fprintf(stderr, "Debug port must be in range 1025 to 65535.\n");
+     LOGE("Debug port must be in range 1025 to 65535.\n");
+  }
   PrintHelp();
   EXIT(1);
 }
@@ -2225,6 +2282,7 @@ static void EnableDebug(bool wait_connect) {
 
   // Print out some information.
   fprintf(stderr, "debugger listening on port %d\n", options.debug_port);
+  LOGE("debugger listening on port %d\n", options.debug_port);
   fflush(stderr);
 
   debugger_running = true;
@@ -2240,6 +2298,7 @@ void EnableDebugSignalHandler(int signal) {
 
   if (!debugger_running) {
     fprintf(stderr, "Hit SIGUSR1 - starting debugger agent.\n");
+    LOGE("Hit SIGUSR1 - starting debugger agent.\n");
     EnableDebug(false);
   }
 }
@@ -2282,6 +2341,7 @@ DWORD WINAPI EnableDebugThreadProc(void* arg) {
   if (!debugger_running) {
     for (int i = 0; i < 1; i++) {
       fprintf(stderr, "Starting debugger agent.\r\n");
+      LOGE("Starting debugger agent.\r\n");
       fflush(stderr);
       EnableDebug(false);
     }
@@ -2619,12 +2679,16 @@ void Isolate::Dispose() {
 int Isolate::Stop(int signum) {
   /* trigger the event loop to wake up, and (in the callback)
    * break out of the loop */
+  LOGD("Stopping signum %d", signum);
   uv_async_send(&stop_watcher);
+  LOGD("Loop broken");
   /* forcibly terminate any ongoing javascript execution, forcing
    * execution to return back to the event loop */
   if(signum == SIGKILL || signum == SIGABRT) {
+  LOGD("Trying kill");
     term_signal = signum;
     V8::TerminateExecution(isolate);
+  LOGD("Terminated");
   }
   return exit_status;
 }
